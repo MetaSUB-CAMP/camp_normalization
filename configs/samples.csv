@@ -1,2 +1,2 @@
-sample_name,illumina_fwd,illumina_rev
-uhgg,/path/to/test_data/uhgg_1.fastq.gz,/path/to/test_data/uhgg_2.fastq.gz
+sample_name,feature_table,metadata
+otutable,path/to/camp_normalization/test_data/otutable.csv,path/to/camp_normalization_no-wrapper/test_data/otutable_metadata.csv
