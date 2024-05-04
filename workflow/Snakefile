@@ -24,6 +24,13 @@ dirs_scr = join(dirs_ext, 'scripts')
 
 # --- Workflow output --- #
 
+from itertools import chain
+
+METHODS_d = {'scaling' : ['tss', 'tmm'],
+             'coda' : ['clr', 'alr', 'ilr'],
+             'transformation' : ['blom', 'npn'],
+             'batch' : ['combat', 'limma']}
+METHODS_l = list(chain.from_iterable(METHODS.values()))
 
 rule all:
     input:
@@ -158,5 +165,174 @@ rule make_config:
         df.rename(columns = {'index': 'sample_name'}, inplace = True)
         df.to_csv(str(output.csv), index = False)
 
+from itertools import chain
+from os.path import abspath, basename, dirname, join
+
+METHODS_d = {'scaling' : ['tss', 'tmm'],
+             'coda' : ['clr', 'alr', 'ilr'],
+             'transformation' : ['blom', 'npn'],
+             'batch' : ['combat', 'limma']}
+METHODS_l = list(chain.from_iterable(METHODS_d.values()))
+
+rule all:
+    input:
+        expand(join(dirs.OUT, '{sample}_{method}.csv', sample=SAMPLES, method=METHODS_l)
+
+rule dataprep:
+    input:
+        #'test_data/{sample}.csv'
+        join(dirs.TMP, '{sample}.csv')
+    output:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'data-prep.R')
+
+rule tss:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_tss.csv')
+    params:
+        'tss'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+
+rule uq:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_uq.csv')
+    params:
+        'uq'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule med:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_med.csv'
+    params:
+        'med'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule css:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_css.csv')
+    params:
+        'css'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule clr:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_clr.csv')
+    params:
+        'clr'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+
+rule alr:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_alr.csv')
+    params:
+        'alr'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule ilr:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_ilr.csv')
+    params:
+        'ilr'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule blom:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_blom.csv')
+    params:
+        'blom'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule npn:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_npn.csv')
+    params:
+        'npn'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+
+rule tmm:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv')
+    output:
+        join(dirs.OUT, '{sample}_tmm.csv')
+    params:
+        'tmm'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+
+rule combat:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv'),
+        join(dirs.TMP, '{sample}_metadata.csv')
+    output:
+        join(dirs.OUT, '{sample}_combat.csv')
+    params:
+        'combat'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
+        
+rule limma:
+    input:
+        join(dirs.OUT, '{sample}_prepped.csv'),
+        join(dirs.TMP, '{sample}_metadata.csv')
+    output:
+        join(dirs.OUT, '{sample}_limma.csv')
+    params:
+        'limma'
+    conda:
+        'normalize'
+    script:
+        join(dirs_scr, 'normalizer.R')
 
 
