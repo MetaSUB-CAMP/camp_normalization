@@ -7,6 +7,7 @@ from os.path import abspath, basename, dirname, join
 import pandas as pd
 import shutil
 from utils import Workflow_Dirs, ingest_samples
+from itertools import chain
 
 
 # Load and/or make the working directory structure
@@ -18,155 +19,10 @@ SAMPLES = ingest_samples(config['samples'], dirs.TMP)
 
 
 # Specify the location of any external resources and scripts
-dirs_ext = join(dirname(abspath(__file__)), 'ext')
+# dirs_ext = join(dirname(abspath(__file__)), 'ext')
+dirs_ext = join(config['workflow_dir'], 'ext')
 dirs_scr = join(dirs_ext, 'scripts')
 
-
-# --- Workflow output --- #
-
-from itertools import chain
-
-METHODS_d = {'scaling' : ['tss', 'tmm'],
-             'coda' : ['clr', 'alr', 'ilr'],
-             'transformation' : ['blom', 'npn'],
-             'batch' : ['combat', 'limma']}
-METHODS_l = list(chain.from_iterable(METHODS.values()))
-
-rule all:
-    input:
-        join(dirs.OUT, 'final_reports', 'samples.csv') 
-
-
-def workflow_mode(wildcards):
-    aligner = 'minimap2' = if config['seq_tech'] == 'nanopore' else 'bowtie2'
-    if config['bin_refinement']:
-        return join(dirs.OUT, aligner + '_refinement', 'done.txt')
-    else:
-        output = []
-        for b in config['binners'].split(','):
-            output.append(join(dirs.OUT, '_'.join([aligner, b]), 'done.txt'))
-        return output
-
-
-# --- Workflow steps --- #
-
-
-rule sample_rule:
-    # Corresponds to map_sort from camp_binning
-    input:
-        fwd = join(dirs.TMP, '{sample}_1.fastq'),
-        rev = join(dirs.TMP, '{sample}_2.fastq'),
-        ctg = join(dirs.TMP, '{sample}.fasta'),
-    output:
-        join(dirs.OUT, '0_contig_coverage', '{sample}', 'coverage.bam'), 
-        join(dirs.OUT, '0_contig_coverage', '{sample}', 'coverage.bam.bai'),
-    log:
-        join(dirs.LOG, 'map_sort', '{sample}.out'),
-    threads: config['map_sort_threads'],
-    resources:
-        mem_mb = lambda wildcards, attempt: \
-              int(config['map_sort_mem_mb']) + 10000 * attempt,
-    params:
-        out_dir = join(dirs.OUT, '0_contig_coverage', '{sample}'),
-    shell:
-        """
-        CTG_PREFIX=$(basename {input.ctg} .fasta)
-        mkdir -p {params.out_dir}
-        bowtie2-build {input.ctg} {params.out_dir}/$CTG_PREFIX > {log} 2>&1
-        bowtie2 -x {params.out_dir}/$CTG_PREFIX -p {threads} \
-            -1 {input.fwd} -2 {input.rev} | \
-            samtools view -@ {threads} -uS - | \
-            samtools sort -@ {threads} - \
-            -o {params.out_dir}/coverage.bam > {log} 2>&1
-        samtools index -@ {threads} {params.out_dir}/coverage.bam > {log} 2>&1
-        """
-
-
-rule first_rule:
-    input:
-        # Symlinked input files,
-    output:
-        # Output files/directories,
-    conda:
-        join(config['env_yamls'], 'new_env.yaml'),
-    log:
-        # Log in appropriate subdirectory,
-    threads: # Format: config[rule_name_threads],
-    resources:
-        mem_mb = # Format: config[rule_name_mem], 
-    params:
-        some_constant = config['some_constant'],
-        other_constant = config['other_constant'],
-        # I usually put the output directory here,
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        ./command_line.sh > {log} 2>&1
-        """
-
-
-rule python_rule:
-    input:
-        # Intermediate input files,
-    output:
-        # Output files/directories,
-    log:
-        # Log in appropriate subdirectory,
-    threads: # Format: config[rule_name_threads],
-    resources:
-        mem_mb = # Format: config[rule_name_mem], 
-    params:
-        some_constant = config['some_constant'],
-        # I usually put the output directory here,
-    run:
-        with open(log[0], 'w') as l:
-            with redirect_stderr(l): # Can be toggled with redirect_stdout depending on the needs of the commands
-                print('Now writing to {}'.format(log))
-                some_python_function()
-
-
-rule external_rule:
-    input:
-        # Some input files,
-    output:
-        # Output files/directories,
-    log:
-        # Log in appropriate subdirectory,
-    threads: # Format: config[rule_name_threads],
-    resources:
-        mem_mb = # Format: config[rule_name_mem], 
-    params:
-        ext_script = join(dirs_scr, 'tmp.sh'),
-        ext_infile = join(dirs_ext, 'tmp.txt'),
-        # I usually put the output directory here,
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        {params.ext_script} {params.ext_infile} > {log} 2>&1
-        """
-
-
-rule make_config:
-    input:
-        workflow_mode, # Intermediate input files (may be determined by workflow mode)
-    output:
-        csv = join(dirs.OUT, 'final_reports', 'samples.csv'),
-        txt = join(dirs.OUT, 'final_reports', 'report.txt'),
-    run:
-        # Collate workflow outputs and i) summarize them in a new samples.csv for downstream analysis and/or ii) copy them to 'final_reports' for external data analysis
-        shutil.copy(str(input[0]), str(output.txt))
-        dct = {}
-        for i in params.samples:
-            s = i.split('/')[-1]
-            if s not in dct: dct[s] = {}
-            dct[str(input[1][s])]['illumina_fwd'] = s
-        df = pd.DataFrame.from_dict(dct, orient ='index')
-        df.reset_index(inplace = True)
-        df.rename(columns = {'index': 'sample_name'}, inplace = True)
-        df.to_csv(str(output.csv), index = False)
-
-from itertools import chain
-from os.path import abspath, basename, dirname, join
 
 METHODS_d = {'scaling' : ['tss', 'tmm'],
              'coda' : ['clr', 'alr', 'ilr'],
@@ -176,18 +32,25 @@ METHODS_l = list(chain.from_iterable(METHODS_d.values()))
 
 rule all:
     input:
-        expand(join(dirs.OUT, '{sample}_{method}.csv', sample=SAMPLES, method=METHODS_l)
+        expand(join(dirs.OUT, '{sample}_{method}.csv'), sample=SAMPLES, method=METHODS_l)
+
+
+# TODO: add log to rules
 
 rule dataprep:
     input:
         #'test_data/{sample}.csv'
-        join(dirs.TMP, '{sample}.csv')
+        sample_csv = join(dirs.TMP, '{sample}.csv')
     output:
-        join(dirs.OUT, '{sample}_prepped.csv')
+        prepped_sample = join(dirs.OUT, '{sample}_prepped.csv')
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'data-prep.R')
+        'normalization'
+    params:
+        data_prep_scr = join(dirs_scr, 'data-prep.R')
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input.sample_csv} {output.prepped_sample}
+        """
 
 rule tss:
     input:
@@ -195,11 +58,14 @@ rule tss:
     output:
         join(dirs.OUT, '{sample}_tss.csv')
     params:
-        'tss'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'tss'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
 
 rule uq:
     input:
@@ -207,23 +73,29 @@ rule uq:
     output:
         join(dirs.OUT, '{sample}_uq.csv')
     params:
-        'uq'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'uq'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule med:
     input:
         join(dirs.OUT, '{sample}_prepped.csv')
     output:
-        join(dirs.OUT, '{sample}_med.csv'
+        join(dirs.OUT, '{sample}_med.csv')
     params:
-        'med'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'med'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule css:
     input:
@@ -231,11 +103,14 @@ rule css:
     output:
         join(dirs.OUT, '{sample}_css.csv')
     params:
-        'css'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'css'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule clr:
     input:
@@ -243,11 +118,14 @@ rule clr:
     output:
         join(dirs.OUT, '{sample}_clr.csv')
     params:
-        'clr'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'clr'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
 
 rule alr:
     input:
@@ -255,11 +133,14 @@ rule alr:
     output:
         join(dirs.OUT, '{sample}_alr.csv')
     params:
-        'alr'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'alr'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule ilr:
     input:
@@ -267,11 +148,14 @@ rule ilr:
     output:
         join(dirs.OUT, '{sample}_ilr.csv')
     params:
-        'ilr'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'ilr'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule blom:
     input:
@@ -279,11 +163,14 @@ rule blom:
     output:
         join(dirs.OUT, '{sample}_blom.csv')
     params:
-        'blom'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'blom'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
         
 rule npn:
     input:
@@ -291,11 +178,14 @@ rule npn:
     output:
         join(dirs.OUT, '{sample}_npn.csv')
     params:
-        'npn'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'npn'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
 
 rule tmm:
     input:
@@ -303,36 +193,44 @@ rule tmm:
     output:
         join(dirs.OUT, '{sample}_tmm.csv')
     params:
-        'tmm'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'tmm'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
-
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
+        """
 rule combat:
     input:
-        join(dirs.OUT, '{sample}_prepped.csv'),
-        join(dirs.TMP, '{sample}_metadata.csv')
+        sample = join(dirs.OUT, '{sample}_prepped.csv'),
+        metadata = join(dirs.TMP, '{sample}_metadata.csv')
     output:
         join(dirs.OUT, '{sample}_combat.csv')
     params:
-        'combat'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'combat'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input.sample} {input.metadata} {params.method} {output}
+        """
         
 rule limma:
     input:
-        join(dirs.OUT, '{sample}_prepped.csv'),
-        join(dirs.TMP, '{sample}_metadata.csv')
+        sample = join(dirs.OUT, '{sample}_prepped.csv'),
+        metadata = join(dirs.TMP, '{sample}_metadata.csv')
     output:
         join(dirs.OUT, '{sample}_limma.csv')
     params:
-        'limma'
+        data_prep_scr = join(dirs_scr, 'normalizer.R'),
+        method = 'limma'
     conda:
-        'normalize'
-    script:
-        join(dirs_scr, 'normalizer.R')
+        'normalization'
+    shell:
+        """
+        Rscript --vanilla {params.data_prep_scr} {input.sample} {input.metadata} {params.method} {output}
+        """
 
 

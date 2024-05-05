@@ -21,17 +21,14 @@ def extract_from_gzip(ap, out):
 
 
 def ingest_samples(samples, tmp):
-    df = pd.read_csv(samples, header = 0, index_col = 0) # name, ctgs, fwd, rev
+    df = pd.read_csv(samples, header = 0, index_col = 0) # name, feature table, metadata
     s = list(df.index)
     lst = df.values.tolist()
     for i,l in enumerate(lst):
         # Symlink your original data to the temporary directory
-        if not exists(join(tmp, s[i] + '.fasta')):
-            extract_from_gzip(abspath(l[0]), join(tmp, s[i] + '_1.fastq'))
-            extract_from_gzip(abspath(l[1]), join(tmp, s[i] + '_2.fastq'))
-            # Example: symlink(abspath(l[0]), join(tmp, s[i] + '.fasta'))
-            # Example: extract_from_gzip(abspath(l[1]), join(tmp, s[i] + '_1.fastq'))
-            # Example: extract_from_gzip(abspath(l[2]), join(tmp, s[i] + '_2.fastq'))
+        if not exists(join(tmp, s[i] + '.csv')):
+            symlink(abspath(l[0]), join(tmp, s[i] + '.csv'))
+            symlink(abspath(l[1]), join(tmp, s[i] + '_metadata.csv'))
     return s
 
 

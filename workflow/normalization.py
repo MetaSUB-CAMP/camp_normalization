@@ -44,7 +44,8 @@ def cmd_line(workflow, work_dir, samples, env_yamls, pyaml, ryaml, cores, env_di
         config = {
             'work_dir': work_dir,
             'samples': samples,
-            'env_yamls': env_yamls
+            'env_yamls': env_yamls,
+            'workflow_dir': join(dirname(dirname(abspath(__file__))), 'workflow')
         },
         configfiles = [
             pyaml,

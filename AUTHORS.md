@@ -3,6 +3,7 @@
 ## Development Lead
 
 * Valeriia Kantsypa <kantsypa.valeriia@gmail.com>: CAMP normalization module development
+* Dmytro Horyslavets <nepotlet@gmail.com>: CAMP normalization module development
 
 ## Contributors
 

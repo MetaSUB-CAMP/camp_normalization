@@ -1,3 +1,6 @@
+#!/usr/bin/env Rscript
+args <- commandArgs(trailingOnly=TRUE)
+
 normalize <- function(sample_prepped, sample_out, method, batch_factor=NULL){
   
   ftable <- read.table(sample_prepped, sep = ",", header = TRUE, row.names = 1)
@@ -113,14 +116,17 @@ normalize <- function(sample_prepped, sample_out, method, batch_factor=NULL){
   write.csv(ftable_norm, sample_out)
   
 }
-  
-sample_prepped <- snakemake@input[[1]]
-sample_out <- snakemake@output[[1]]
-method <-  snakemake@params[[1]]
+
+# TODO: poor logic, improve
+# args = c(snakemake@input[[1]], snakemake@input[[2]], snakemake@params[[1]], snakemake@output[[1]])
+
+sample_prepped <- args[1]
+sample_out <- args[4]
+method <- args[3]
+pathtometa <- args[2]
 
 batchcorr_methods <- c('conqur', 'combat', 'limma')
 if(method %in%  batchcorr_methods){
-  pathtometa <- snakemake@input[[2]]
   meta <- read.table(pathtometa, sep = ",", header = TRUE, row.names = 1)
   batch_factor <- factor(meta$batch)
   normalize(sample_prepped, sample_out, method, batch_factor)
