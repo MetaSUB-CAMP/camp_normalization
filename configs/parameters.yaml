@@ -1,11 +1,22 @@
 #'''Parameters config.'''#
 
+# --- Methods choice --- #
+# choose the method class
+all: False
+scaling: False
+coda: False
+transformation: False
+batchcorr: False
 
-# --- general --- #
-
-some_constant:   2500
-
-
-# --- first_rule --- #
-
-other_constant:    10000
+# alternativaly, specify the list
+fromthelist: True
+methodslist:
+  -  tss
+  -  tmm
+  -  clr
+  #-  alr
+  #-  ilr
+  #-  blom
+  #-  npn
+  #-  combat
+  #-  limma
