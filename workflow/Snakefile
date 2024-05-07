@@ -28,7 +28,19 @@ METHODS_d = {'scaling' : ['tss', 'tmm'],
              'coda' : ['clr', 'alr', 'ilr'],
              'transformation' : ['blom', 'npn'],
              'batch' : ['combat', 'limma']}
-METHODS_l = list(chain.from_iterable(METHODS_d.values()))
+METHODS_l = set()
+if config['all']:
+   METHODS_l.update(chain.from_iterable(METHODS_d.values()))
+if config['scaling']:
+   METHODS_l.update(METHODS_d['scaling'])
+if config['coda']:
+   METHODS_l.update(METHODS_d['coda'])
+if config['transformation']:
+   METHODS_l.update(METHODS_d['transformation'])
+if config['batchcorr']:
+   METHODS_l.update(METHODS_d['batchcorr'])
+if config['fromthelist']:
+   METHODS_l.update(config['methodslist'])
 
 rule all:
     input:
@@ -39,198 +51,33 @@ rule all:
 
 rule dataprep:
     input:
-        #'test_data/{sample}.csv'
-        sample_csv = join(dirs.TMP, '{sample}.csv')
+        ftable = join(dirs.TMP, '{sample}.csv')
     output:
-        prepped_sample = join(dirs.OUT, '{sample}_prepped.csv')
+        ftable_prepped = join(dirs.OUT, '{sample}_prepped.csv')
     conda:
         'normalization'
     params:
         data_prep_scr = join(dirs_scr, 'data-prep.R')
     shell:
         """
-        Rscript --vanilla {params.data_prep_scr} {input.sample_csv} {output.prepped_sample}
+        Rscript --vanilla {params.data_prep_scr} {input.ftable} {output.ftable_prepped}
         """
 
-rule tss:
+rule normalize:
     input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_tss.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'tss'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-
-rule uq:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_uq.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'uq'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule med:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_med.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'med'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule css:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_css.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'css'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule clr:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_clr.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'clr'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-
-rule alr:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_alr.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'alr'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule ilr:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_ilr.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'ilr'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule blom:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_blom.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'blom'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-        
-rule npn:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_npn.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'npn'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-
-rule tmm:
-    input:
-        join(dirs.OUT, '{sample}_prepped.csv')
-    output:
-        join(dirs.OUT, '{sample}_tmm.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'tmm'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input} _ {params.method} {output}
-        """
-rule combat:
-    input:
-        sample = join(dirs.OUT, '{sample}_prepped.csv'),
+        ftable_prepped = join(dirs.OUT, '{sample}_prepped.csv'),
         metadata = join(dirs.TMP, '{sample}_metadata.csv')
     output:
-        join(dirs.OUT, '{sample}_combat.csv')
+        ftable_norm = join(dirs.OUT, '{sample}_{method}.csv')
     params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'combat'
+        data_norm_scr = join(dirs_scr, 'normalizer.R')
     conda:
         'normalization'
     shell:
         """
-        Rscript --vanilla {params.data_prep_scr} {input.sample} {input.metadata} {params.method} {output}
+        Rscript --vanilla {params.data_norm_scr} \
+                -i {input.ftable_prepped} \
+                -m {wildcards.method} \
+                --meta {input.metadata} \
+                -o {output.ftable_norm}
         """
-        
-rule limma:
-    input:
-        sample = join(dirs.OUT, '{sample}_prepped.csv'),
-        metadata = join(dirs.TMP, '{sample}_metadata.csv')
-    output:
-        join(dirs.OUT, '{sample}_limma.csv')
-    params:
-        data_prep_scr = join(dirs_scr, 'normalizer.R'),
-        method = 'limma'
-    conda:
-        'normalization'
-    shell:
-        """
-        Rscript --vanilla {params.data_prep_scr} {input.sample} {input.metadata} {params.method} {output}
-        """
-
-

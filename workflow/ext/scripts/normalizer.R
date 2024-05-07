@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-args <- commandArgs(trailingOnly=TRUE)
+library(argparse)
 
 normalize <- function(sample_prepped, sample_out, method, batch_factor=NULL){
   
@@ -120,12 +120,22 @@ normalize <- function(sample_prepped, sample_out, method, batch_factor=NULL){
 # TODO: poor logic, improve
 # args = c(snakemake@input[[1]], snakemake@input[[2]], snakemake@params[[1]], snakemake@output[[1]])
 
-sample_prepped <- args[1]
-sample_out <- args[4]
-method <- args[3]
-pathtometa <- args[2]
+parser <- ArgumentParser(description= 'Normalizes the input feature table applying the method of choice')
 
-batchcorr_methods <- c('conqur', 'combat', 'limma')
+parser$add_argument('--input', '-i', help= 'a prepared feature table')
+parser$add_argument('--output', '-o', help= 'a normalized feature table')
+parser$add_argument('--meta', help= 'a metadata table required for batch correction;
+                    must contain a `batch` column')
+parser$add_argument('--method', '-m', help= 'the normalization method')
+
+xargs<- parser$parse_args()
+
+sample_prepped <- xargs$input
+sample_out <- xargs$output
+method <- xargs$method
+pathtometa <- xargs$meta
+
+batchcorr_methods <- c('combat', 'limma')
 if(method %in%  batchcorr_methods){
   meta <- read.table(pathtometa, sep = ",", header = TRUE, row.names = 1)
   batch_factor <- factor(meta$batch)
