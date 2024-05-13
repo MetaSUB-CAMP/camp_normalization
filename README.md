@@ -69,10 +69,10 @@ Add description of your workflow's output files
 ### Running the Workflow
 
 1. Make your own `samples.csv` based on the template in `configs/samples.csv`. Sample test data can be found in `test_data/`. 
-    - For example, `ingest_samples` in `workflow/utils.py` expects Illumina reads in FastQ (may be gzipped) form and de novo assembled contigs in FastA form
+    - For example, `ingest_samples` in `workflow/utils.py` expects a feature table in csv format along with a metadata table. The column that contains a batch variable must be renamed to `batch` for the batch correction methods to run successfully.
     - `samples.csv` requires either absolute paths or paths relative to the directory that the module is being run in.
 
-2. Update the relevant parameters in `configs/parameters.yaml`.
+2. Update the relevant parameters in `configs/parameters.yaml`: choose the normalization methods either from the list of methods or specify the groups of methods that need to be applied.
 
 3. Update the computational resources available to the pipeline in `configs/resources.yaml`. 
 
