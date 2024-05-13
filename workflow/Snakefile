@@ -24,7 +24,7 @@ dirs_ext = join(config['workflow_dir'], 'ext')
 dirs_scr = join(dirs_ext, 'scripts')
 
 
-METHODS_d = {'scaling' : ['tss', 'tmm'],
+METHODS_d = {'scaling' : ['tss', 'uq', 'med', 'css', 'tmm'],
              'coda' : ['clr', 'alr', 'ilr'],
              'transformation' : ['blom', 'npn'],
              'batch' : ['combat', 'limma']}

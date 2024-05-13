@@ -8,10 +8,10 @@ args <- commandArgs(trailingOnly=TRUE)
 data <- read.table(args[1], sep = ",",
                    header = TRUE, row.names = 1)
 
-# remove the all zero counts
-data <- data[rowSums(data) > 0, ]
 # remove samples with only 1 non-zero features
 data <- data[colSums(data > 0) >= 2]
+# remove the all zero counts
+data <- data[rowSums(data) > 0, ]
 
 write.table(data, args[2], sep = ",")
 
