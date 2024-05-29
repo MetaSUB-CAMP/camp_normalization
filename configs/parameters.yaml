@@ -12,11 +12,14 @@ batchcorr: False
 fromthelist: True
 methodslist:
   -  tss
+  -  uq
+  -  med
+  -  css
   -  tmm
   -  clr
-  #-  alr
-  #-  ilr
-  #-  blom
-  #-  npn
-  #-  combat
-  #-  limma
+  #- alr
+  #- ilr
+  #- blom
+  #- npn
+  #- combat
+  #- limma
